@@ -1,4 +1,4 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://taxhub.onrender.com";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "https://taxhub.onrender.com/api";
 
 export function getAuthHeaders() {
   if (typeof window === "undefined") return { "Content-Type": "application/json" };
