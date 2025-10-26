@@ -4,6 +4,7 @@ import { apiGet } from "@/lib/api";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Image from "next/image";
 import { Dialog } from "@headlessui/react";
+import { getImagePrefix } from "@/utils/util";
 
 export const Demobooks = () => {
   const [demofile, setDemofile] = useState([]);
