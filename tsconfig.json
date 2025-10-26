@@ -32,7 +32,7 @@
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "src/utils/validateEmail.jsx", "src/utils/markdownToHtml.jsx", "src/utils/markdown.jsx"  ],
   "exclude": [
     "node_modules"
   ]

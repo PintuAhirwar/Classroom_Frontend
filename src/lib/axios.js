@@ -1,8 +1,9 @@
 // lib/axios.js (update)
 import axios from "axios";
+import { API_BASE } from "@/lib/api";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000/api/",
+  baseURL: `${API_BASE}/api/`,
   withCredentials: true,
 });
 
@@ -19,7 +20,7 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && !originalReq._retry ) {
       try {
         const refresh = localStorage.getItem("refresh_token");
-        const res = await axios.post("http://localhost:8000/api/token/refresh/",
+        const res = await axios.post(`${API_BASE}/api/token/refresh/`,
           localStorage.setItem("access_token", res.data.access));
           originalReq.headers.Authorization = `Bearer ${res.data.access}`;
           return api(originalReq);
