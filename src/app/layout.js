@@ -2,7 +2,7 @@ import { ThemeProvider } from "next-themes";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
-import '../style/style.css';
+import '../Style/style.css';
 import Header from "@/components/Layout/Header";
 import Footer from "@/components/Layout/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
