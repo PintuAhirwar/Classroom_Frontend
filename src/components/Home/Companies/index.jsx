@@ -10,13 +10,13 @@ import { getImagePrefix } from "@/utils/util";
 
 // CAROUSEL SETTINGS
 const Companies = () => {
-          const [marks, setMarks] = useState([]);
-        
-          useEffect(() => {
-            apiGet("/marks/")
-              .then(setMarks)
-              .catch(console.error);
-          }, []);
+    const [marks, setMarks] = useState([]);
+
+    useEffect(() => {
+        apiGet("/marks/")
+            .then(setMarks)
+            .catch(console.error);
+    }, []);
 
     const settings = {
         dots: false,
@@ -66,9 +66,20 @@ const Companies = () => {
                 <div className="py-14 border-b ">
                     <Slider {...settings}>
                         {marks.map((item, i) =>
-                        
+
                             <div key={i}>
-                                <Image src={item.image.startsWith("http") ? item.image : `${getImagePrefix()}${item.image}`} alt="" width={196} height={76} />
+                                <Image
+                                    src={
+                                        !item.image
+                                            ? "/images/student_placeholder.png"
+                                            : item.image.startsWith("http")
+                                                ? item.image
+                                                : `${getImagePrefix()}${item.image}`
+                                    }
+                                    alt=""
+                                    width={196}
+                                    height={76}
+                                />
                             </div>
                         )}
                     </Slider>

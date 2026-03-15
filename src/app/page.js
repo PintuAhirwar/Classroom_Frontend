@@ -5,9 +5,10 @@ import Courses from "@/components/Home/Courses";
 import Mentor from "@/components/Home/Mentor";
 import Testimonial from "@/components/Home/Testimonials";
 import Newsletter from "@/components/Home/Newsletter";
+import WhyChooseUs from "@/components/Home/WhyChooseUs";
 import { Metadata } from "next";
 export const metadata = {
-  title: "taxhub",
+  title: "classroom",
 };
 
 export default function Home() {
@@ -17,6 +18,7 @@ export default function Home() {
       <Companies />
       <Courses />
       <Mentor />
+      <WhyChooseUs />
       <Testimonial />
       <Newsletter />
     </main>

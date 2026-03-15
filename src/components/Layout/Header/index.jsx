@@ -4,247 +4,256 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { headerData } from "./Navigation/menuData";
 import Logo from "./Logo";
-import HeaderLink from "./Navigation/HeaderLink";
-import MobileHeaderLink from "./Navigation/MobileHeaderLink";
 import Signin from "@/components/Auth/SignIn";
-import { useTheme } from "next-themes";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import ProfileDropdown from "@/components/Layout/Header/ProfileDropdown";
-import axios from "axios";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { use } from "react";
 import { useCart } from "@/context/CartContext";
-import { API_BASE } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { useActiveSection } from "@/hooks/useActiveSection";
+import CoursesDropdown from "./Navigation/CoursesDropdown";
 
 export default function Header() {
-  const pathUrl = usePathname();
-  const { theme } = useTheme();
-  const [navbarOpen, setNavbarOpen] = useState(false);
-  const [sticky, setSticky] = useState(false);
+  const pathUrl               = usePathname();
+  const activeSection         = useActiveSection();
+  const [navbarOpen, setNavbarOpen]     = useState(false);
+  const [sticky, setSticky]             = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [refresh, setRefresh] = useState(null);
-  const [successMessage, setSuccessMessage] = useState("");
-  const { cart } = useCart(); // get cart from context
-  const cartCount = cart.length;  // reactive
+  const { user, logout, loading }       = useAuth();
+  const { cart }                        = useCart();
+  const cartCount                       = cart.length;
+  const signInRef                       = useRef(null);
+  const mobileMenuRef                   = useRef(null);
 
-  const navbarRef = useRef(null);
-  const signInRef = useRef(null);
-  const mobileMenuRef = useRef(null);
-
-  // Sticky header on scroll
-  const handleScroll = () => setSticky(window.scrollY >= 80);
-
-  // Click outside handler
-  const handleClickOutside = (event) => {
-    if (signInRef.current && !signInRef.current.contains(event.target)) {
-      setIsSignInOpen(false);
-    }
-    if (
-      mobileMenuRef.current &&
-      !mobileMenuRef.current.contains(event.target) &&
-      navbarOpen
-    ) {
-      setNavbarOpen(false);
-    }
-  };
-
+  // Sticky on scroll
   useEffect(() => {
-    window.addEventListener("scroll", handleScroll);
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [navbarOpen, isSignInOpen]);
-
-  // Disable body scroll when modal open
-  useEffect(() => {
-    document.body.style.overflow = isSignInOpen || navbarOpen ? "hidden" : "";
-  }, [isSignInOpen, navbarOpen]);
-
-  // Auto-hide success message
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(""), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
-
-  // --- Fetch user profile when token changes
-  // Load tokens safely
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setToken(localStorage.getItem("access"));
-      setRefresh(localStorage.getItem("refresh"));
-    }
+    const handleScroll = () => setSticky(window.scrollY >= 80);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Click outside
   useEffect(() => {
-    if (!token) return;
-    axios
-      .get(`${API_BASE}/api/auth/profile/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setUser(res.data))
-      .catch(() => setUser(null));
-  }, [token]);
-
-  // --- Logout
-  const handleLogout = async () => {
-    try {
-      if (!refresh) return;
-      await axios.post(`${API_BASE}/api/auth/logout/`, {
-        refresh_token: refresh,
-      });
-    } catch (e) {
-      console.error("Logout error:", e);
-    } finally {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
-        window.location.href = "/";  // Full page reload to SignIn
+    const handleClick = (e) => {
+      if (signInRef.current && !signInRef.current.contains(e.target)) {
+        setIsSignInOpen(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target) && navbarOpen) {
+        setNavbarOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [navbarOpen]);
+
+  // Lock body scroll
+  useEffect(() => {
+    document.body.style.overflow = (isSignInOpen || navbarOpen) ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isSignInOpen, navbarOpen]);
+
+  // Is a nav item active?
+  const isActive = (item) => {
+      console.log("pathUrl:", pathUrl, "| activeSection:", activeSection, "| item:", item.label, item.href);
+  // Home — sirf tab active jab koi section scroll nahi hua
+  if (pathUrl.startsWith("/documentation")) {
+    return item.label === "Demo";
+  }
+
+  // /courses/* page — sirf Courses active
+  if (pathUrl.startsWith("/courses")) {
+    return item.label === "Courses";
+  }
+
+  // Home page /
+  if (pathUrl === "/") {
+    // Home link — sirf jab top pe ho
+    if (item.href === "/") {
+      return activeSection === "";
     }
-  };
+    // Section links
+    if (item.href.startsWith("/#")) {
+      const sectionId = item.href.replace("/#", "");
+      return activeSection === sectionId;
+    }
+  }
+
+  return false;
+};
+
+  if (loading) return (
+    <header className="fixed top-0 z-40 w-full bg-white py-4 h-[72px]" />
+  );
 
   return (
-    <header
-      className={`fixed top-0 z-40 w-full pb-5 transition-all duration-300 bg-white ${sticky ? "shadow-lg py-5" : "shadow-none py-6"
-        }`}
-    >
-      {successMessage && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-          {successMessage}
-        </div>
-      )}
+    <>
+      <header className={`fixed top-0 z-40 w-full bg-white transition-all duration-300
+        ${sticky ? "shadow-md py-3" : "shadow-none py-4"}`}>
+        <div className="container mx-auto lg:max-w-screen-xl px-4 flex items-center justify-between gap-4">
 
-      <div className="lg:py-0 py-2">
-        <div className="container mx-auto lg:max-w-screen-xl md:max-w-screen-md flex items-center justify-between px-4">
+          {/* Logo */}
           <Logo />
 
-          {/* Desktop navigation */}
-          <nav className="hidden lg:flex flex-grow items-center gap-8 justify-center">
-            {headerData.map((item, index) => (
-              <HeaderLink
-                key={index}
-                item={item}
-                hrefOverride={item.label === "Demo" ? "/documentation" : undefined}
-              />
-            ))}
+          {/* Desktop nav */}
+          <nav className="hidden lg:flex items-center gap-6 flex-1 justify-center">
+            {headerData.map((item, i) =>
+              item.label === "Courses" ? (
+                <CoursesDropdown key={i} isActive={isActive(item)} />
+              ) : (
+                <NavLink key={i} item={item} active={isActive(item)} />
+              )
+            )}
           </nav>
 
-          <div className="flex items-center gap-4">
+          {/* Right side */}
+          <div className="flex items-center gap-3">
+            {/* Cart */}
+            <Link href="/cart" className="relative p-1">
+              <Icon icon="mdi:cart-outline" className="text-2xl text-midnight_text" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs
+                                 w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Auth — desktop */}
             {!user ? (
               <button
-                className="hidden lg:block bg-primary text-white hover:bg-primary/15 hover:text-primary px-16 py-5 rounded-full text-lg font-medium"
                 onClick={() => setIsSignInOpen(true)}
+                className="hidden lg:flex items-center gap-1.5 bg-primary text-white
+                           px-5 py-2.5 rounded-full text-sm font-semibold
+                           hover:bg-primary/90 transition-colors"
               >
                 Sign In
               </button>
             ) : (
-              <div className="flex items-center gap-4">
-                {/* Cart icon */}
-                <Link href="/cart" className="relative">
-                  <Icon icon="mdi:cart-outline" className="text-2xl text-midnight_text dark:text-white" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                      {cartCount}
-                    </span>
-                  )}
-                </Link>
-
-                {/* Profile Dropdown */}
-                <ProfileDropdown user={user} onLogout={handleLogout} />
+              <div className="hidden lg:block">
+                <ProfileDropdown user={user} onLogout={logout} />
               </div>
             )}
 
-            {/* Mobile menu toggle */}
+            {/* Hamburger — mobile */}
             <button
-              onClick={() => setNavbarOpen(!navbarOpen)}
-              className="block lg:hidden p-2 rounded-lg"
+              onClick={() => setNavbarOpen(true)}
+              className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              aria-label="Open menu"
             >
-              <span className="block w-6 h-0.5 bg-black"></span>
-              <span className="block w-6 h-0.5 bg-black mt-1.5"></span>
-              <span className="block w-6 h-0.5 bg-black mt-1.5"></span>
+              <Icon icon="mdi:menu" className="text-2xl text-midnight_text" />
             </button>
           </div>
         </div>
+      </header>
 
-        {/* Mobile menu */}
-        <div
-          ref={mobileMenuRef}
-          className={`lg:hidden fixed top-0 right-0 h-full w-full bg-darkmode shadow-lg transform transition-transform duration-300 max-w-xs ${navbarOpen ? "translate-x-0" : "translate-x-full"
-            } z-50`}
-        >
-          <div className="flex items-center justify-between p-4">
-            <h2 className="text-lg font-bold text-midnight_text dark:text-midnight_text">
-              <Logo />
-            </h2>
-            <button
-              onClick={() => setNavbarOpen(false)}
-              className="bg-[url('/images/closed.svg')] bg-no-repeat bg-contain w-5 h-5 absolute top-0 right-0 mr-8 mt-8 dark:invert"
-            />
-          </div>
+      {/* Mobile overlay */}
+      {navbarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 lg:hidden"
+             onClick={() => setNavbarOpen(false)} />
+      )}
 
-          <nav className="flex flex-col items-start p-4">
-            {headerData.map((item, index) => (
-              <MobileHeaderLink key={index} item={item} />
-            ))}
-
-            <div className="mt-4 flex flex-col space-y-4 w-full">
-              {!user ? (
-                <button
-                  className="bg-transparent border border-primary text-primary px-4 py-2 rounded-lg hover:bg-blue-600 hover:text-white"
-                  onClick={() => {
-                    setIsSignInOpen(true);
-                    setNavbarOpen(false);
-                  }}
-                >
-                  Sign In
-                </button>
-              ) : (
-                <>
-                  <span className="text-white">Hi, {user.name}</span>
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setNavbarOpen(false);
-                    }}
-                    className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                  >
-                    Logout
-                  </button>
-                </>
-              )}
-            </div>
-          </nav>
+      {/* Mobile drawer */}
+      <div
+        ref={mobileMenuRef}
+        className={`fixed top-0 right-0 h-full w-72 bg-white shadow-2xl z-50 lg:hidden
+                    transform transition-transform duration-300
+                    ${navbarOpen ? "translate-x-0" : "translate-x-full"}`}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-slate-100">
+          <Logo />
+          <button
+            onClick={() => setNavbarOpen(false)}
+            className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center
+                       hover:bg-slate-200 transition-colors"
+          >
+            <Icon icon="mdi:close" className="text-slate-600 text-lg" />
+          </button>
         </div>
 
-        {/* SignIn Modal */}
-        {isSignInOpen && (
-          <div className="fixed top-0 left-0 w-full h-full bg-black/50 flex items-center justify-center z-50">
-            <div
-              ref={signInRef}
-              className="relative mx-auto w-full max-w-md overflow-hidden rounded-lg px-8 pt-14 pb-8 text-center bg-white"
-            >
-              <button
-                onClick={() => setIsSignInOpen(false)}
-                className="absolute top-0 right-0 mr-8 mt-8 dark:invert"
+        <nav className="p-4 flex flex-col gap-1">
+          {headerData.map((item, i) => {
+            const active = isActive(item);
+            return (
+              <Link
+                key={i}
+                href={item.href}
+                onClick={() => setNavbarOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium
+                            transition-colors
+                            ${active
+                              ? "bg-primary/10 text-primary font-semibold"
+                              : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"}`}
               >
-                <Icon
-                  icon="tabler:x"
-                  className="text-black hover:text-primary text-24 inline-block me-2"
-                />
-              </button>
-              <Signin onSuccess={(userData) => handleLogin(userData, "Login successful")} />
-            </div>
-          </div>
-        )}
-      </div>
-    </header>
-  );
-};
+                {active && <span className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0" />}
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
 
+        {/* Mobile auth bottom */}
+        <div className="absolute bottom-0 inset-x-0 p-4 border-t border-slate-100 bg-white">
+          {!user ? (
+            <button
+              onClick={() => { setNavbarOpen(false); setIsSignInOpen(true); }}
+              className="w-full bg-primary text-white py-3 rounded-full text-sm font-semibold
+                         hover:bg-primary/90 transition-colors"
+            >
+              Sign In
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-primary/10 rounded-full flex items-center justify-center
+                              text-primary font-bold text-sm flex-shrink-0">
+                {user.name?.[0]?.toUpperCase() || "U"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-900 truncate">{user.name}</p>
+                <Link href="/profile" onClick={() => setNavbarOpen(false)}
+                  className="text-xs text-primary hover:underline">View Profile</Link>
+              </div>
+              <button
+                onClick={() => { logout(); setNavbarOpen(false); }}
+                className="text-xs text-red-500 font-semibold px-3 py-1.5 rounded-lg
+                           hover:bg-red-50 transition-colors flex-shrink-0"
+              >
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* SignIn Modal */}
+      {isSignInOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div ref={signInRef}
+               className="bg-white rounded-2xl w-full max-w-md p-8 relative shadow-2xl">
+            <button
+              onClick={() => setIsSignInOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 bg-slate-100 rounded-full
+                         flex items-center justify-center hover:bg-slate-200 transition-colors"
+            >
+              <Icon icon="mdi:close" className="text-slate-600 text-base" />
+            </button>
+            <Signin onSuccess={() => setIsSignInOpen(false)} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Desktop nav link
+function NavLink({ item, active }) {
+  return (
+    <Link
+      href={item.href}
+      className={`text-base font-medium transition-colors relative py-1
+        ${active
+          ? "text-black after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary after:rounded-full"
+          : "text-slate-600 hover:text-black"}`}
+    >
+      {item.label}
+    </Link>
+  );
+}

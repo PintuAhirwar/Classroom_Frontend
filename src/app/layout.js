@@ -6,22 +6,16 @@ import '../Style/style.css';
 import Header from "@/components/Layout/Header";
 import Footer from "@/components/Layout/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
-import Home from "./page";
 import { Inter } from "next/font/google";
 import { CartProvider } from "@/context/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
+import { ToastContainer } from "react-toastify";        // ← ADD
+import "react-toastify/dist/ReactToastify.css";         // ← ADD
+
 const inter = Inter({ subsets: ["latin"] });
 
-
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata = {
   title: "Create Next App",
@@ -32,16 +26,24 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          enableSystem={true}
-          defaultTheme="light"
-        ><CartProvider>
-          <Header />
-          {children}
-          <Footer />
-          <ScrollToTop />
-          </CartProvider>
+        <ThemeProvider attribute="class" enableSystem={true} defaultTheme="light">
+          <AuthProvider>
+            <CartProvider>
+              <Header />
+              {children}
+              <Footer />
+              <ScrollToTop />
+              <ToastContainer
+                position="bottom-center"
+                autoClose={2500}
+                hideProgressBar={false}
+                newestOnTop
+                closeOnClick
+                pauseOnHover
+                draggable
+              />
+            </CartProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,369 +1,176 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
-import Loader from "@/components/Common/Loader";
+import { toast } from "react-toastify";
+import Logo from "@/components/Layout/Header/Logo";
 import Link from "next/link";
-import Image from "next/image";
-import { getImagePrefix } from "@/utils/util";
+import { Icon } from "@iconify/react";
 
-const ResetPassword = ({ token }: { token: string }) => {
-  const [data, setData] = useState({
-    newPassword: "",
-    ReNewPassword: "",
-  });
-  const [loader, setLoader] = useState(false);
-
-  const [user, setUser] = useState({
-    email: "",
-  });
-
+const ResetPassword = ({ token }) => {
   const router = useRouter();
+  const [data, setData]         = useState({ newPassword: "", confirmPassword: "" });
+  const [loading, setLoading]   = useState(false);
+  const [verifying, setVerifying] = useState(true);
+  const [userEmail, setUserEmail] = useState("");
+  const [showPass, setShowPass]   = useState({ new: false, confirm: false });
 
   useEffect(() => {
-    const verifyToken = async () => {
+    const verify = async () => {
       try {
-        const res = await axios.post(`/api/forgot-password/verify-token`, {
-          token,
-        });
-
-        if (res.status === 200) {
-          setUser({
-            email: res.data.email,
-          });
-        }
-      } catch (error: any) {
-        toast.error(error?.response?.data);
+        const res = await axios.post("/api/forgot-password/verify-token", { token });
+        if (res.status === 200) setUserEmail(res.data.email);
+      } catch (err) {
+        toast.error(err?.response?.data || "Invalid or expired link");
         router.push("/forgot-password");
+      } finally {
+        setVerifying(false);
       }
     };
-
-    verifyToken();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    verify();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setData({
-      ...data,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const handleChange = (e) => setData({ ...data, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoader(true);
-
-    if (data.newPassword === "") {
-      toast.error("Please enter your password.");
-      return;
+    if (data.newPassword !== data.confirmPassword) {
+      return toast.error("Passwords do not match");
     }
-
+    if (data.newPassword.length < 8) {
+      return toast.error("Password must be at least 8 characters");
+    }
+    setLoading(true);
     try {
-      const res = await axios.post(`/api/forgot-password/update`, {
-        email: user?.email,
-        password: data.newPassword,
+      const res = await axios.post("/api/forgot-password/update", {
+        email: userEmail, password: data.newPassword,
       });
-
       if (res.status === 200) {
-        toast.success(res.data);
-        setData({ newPassword: "", ReNewPassword: "" });
+        toast.success("Password updated successfully!");
         router.push("/signin");
       }
-
-      setLoader(false);
-    } catch (error: any) {
-      toast.error(error.response.data);
-      setLoader(false);
+    } catch (err) {
+      toast.error(err?.response?.data || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (verifying) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <Icon icon="mdi:loading" className="animate-spin text-primary text-3xl" />
+    </div>
+  );
+
   return (
-    <section className="bg-[#F4F7FF] py-14 dark:bg-dark lg:py-20">
-      <div className="container">
-        <div className="-mx-4 flex flex-wrap">
-          <div className="w-full px-4">
-            <div
-              className="wow fadeInUp relative mx-auto max-w-[525px] overflow-hidden rounded-lg bg-white px-8 py-14 text-center dark:bg-dark-2 sm:px-12 md:px-[60px]"
-              data-wow-delay=".15s"
-            >
-              <div className="mb-10 text-center">
-                <Link href="/" className="mx-auto inline-block max-w-[160px]">
-                  <Image
-                    
-                    src= {`${getImagePrefix()}images/logo/logo.svg`}
-                    alt="logo"
-                    width={140}
-                    height={30}
-                    className="dark:hidden"
-                  />
-                  <Image
-                    src={`${getImagePrefix()}images/logo/logo-white.svg`}
-                    alt="logo"
-                    width={140}
-                    height={30}
-                    className="hidden dark:block"
-                  />
-                </Link>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+
+          <div className="flex justify-center mb-8">
+            <Logo />
+          </div>
+
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-slate-900">Set new password</h1>
+            <p className="text-slate-500 text-sm mt-1">
+              {userEmail && <>For <span className="font-medium text-slate-700">{userEmail}</span></>}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* New password */}
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
+                New Password
+              </label>
+              <div className="relative">
+                <Icon icon="mdi:lock-outline"
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
+                <input
+                  type={showPass.new ? "text" : "password"}
+                  name="newPassword" placeholder="Min. 8 characters"
+                  value={data.newPassword} onChange={handleChange} required
+                  className="w-full pl-10 pr-11 py-3 rounded-xl border border-slate-200 bg-slate-50
+                             text-sm text-slate-900 placeholder:text-slate-400
+                             focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50
+                             transition-all"
+                />
+                <button type="button"
+                  onClick={() => setShowPass(p => ({ ...p, new: !p.new }))}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <Icon icon={showPass.new ? "mdi:eye-off-outline" : "mdi:eye-outline"} className="text-lg" />
+                </button>
               </div>
-
-              <form onSubmit={handleSubmit}>
-                <div className="mb-[22px]">
-                  <input
-                    type="text"
-                    placeholder="New password"
-                    name="newPassword"
-                    value={data?.newPassword}
-                    onChange={handleChange}
-                    required
-                    className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
-                  />
+              {/* Strength indicator */}
+              {data.newPassword && (
+                <div className="flex gap-1 mt-2">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className={`h-1 flex-1 rounded-full transition-colors
+                      ${data.newPassword.length >= i * 2
+                        ? i <= 1 ? "bg-red-400" : i <= 2 ? "bg-amber-400" : i <= 3 ? "bg-yellow-400" : "bg-emerald-400"
+                        : "bg-slate-200"}`} />
+                  ))}
                 </div>
-
-                <div className="mb-[22px]">
-                  <input
-                    type="text"
-                    placeholder="New password"
-                    name="newPassword"
-                    value={data?.newPassword}
-                    onChange={handleChange}
-                    required
-                    className="w-full rounded-md border border-stroke bg-transparent px-5 py-3 text-base text-dark outline-none transition placeholder:text-dark-6 focus:border-primary focus-visible:shadow-none dark:border-dark-3 dark:text-white dark:focus:border-primary"
-                  />
-                </div>
-                <div className="">
-                  <button
-                    type="submit"
-                    className="flex w-full cursor-pointer items-center justify-center rounded-md border border-primary bg-primary px-5 py-3 text-base text-white transition duration-300 ease-in-out hover:bg-blue-dark"
-                  >
-                    Save Password {loader && <Loader />}
-                  </button>
-                </div>
-              </form>
-
-              <div>
-                <span className="absolute right-1 top-1">
-                  <svg
-                    width="40"
-                    height="40"
-                    viewBox="0 0 40 40"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <circle
-                      cx="1.39737"
-                      cy="38.6026"
-                      r="1.39737"
-                      transform="rotate(-90 1.39737 38.6026)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="1.39737"
-                      cy="1.99122"
-                      r="1.39737"
-                      transform="rotate(-90 1.39737 1.99122)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="13.6943"
-                      cy="38.6026"
-                      r="1.39737"
-                      transform="rotate(-90 13.6943 38.6026)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="13.6943"
-                      cy="1.99122"
-                      r="1.39737"
-                      transform="rotate(-90 13.6943 1.99122)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="25.9911"
-                      cy="38.6026"
-                      r="1.39737"
-                      transform="rotate(-90 25.9911 38.6026)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="25.9911"
-                      cy="1.99122"
-                      r="1.39737"
-                      transform="rotate(-90 25.9911 1.99122)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="38.288"
-                      cy="38.6026"
-                      r="1.39737"
-                      transform="rotate(-90 38.288 38.6026)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="38.288"
-                      cy="1.99122"
-                      r="1.39737"
-                      transform="rotate(-90 38.288 1.99122)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="1.39737"
-                      cy="26.3057"
-                      r="1.39737"
-                      transform="rotate(-90 1.39737 26.3057)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="13.6943"
-                      cy="26.3057"
-                      r="1.39737"
-                      transform="rotate(-90 13.6943 26.3057)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="25.9911"
-                      cy="26.3057"
-                      r="1.39737"
-                      transform="rotate(-90 25.9911 26.3057)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="38.288"
-                      cy="26.3057"
-                      r="1.39737"
-                      transform="rotate(-90 38.288 26.3057)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="1.39737"
-                      cy="14.0086"
-                      r="1.39737"
-                      transform="rotate(-90 1.39737 14.0086)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="13.6943"
-                      cy="14.0086"
-                      r="1.39737"
-                      transform="rotate(-90 13.6943 14.0086)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="25.9911"
-                      cy="14.0086"
-                      r="1.39737"
-                      transform="rotate(-90 25.9911 14.0086)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="38.288"
-                      cy="14.0086"
-                      r="1.39737"
-                      transform="rotate(-90 38.288 14.0086)"
-                      fill="#3056D3"
-                    />
-                  </svg>
-                </span>
-                <span className="absolute bottom-1 left-1">
-                  <svg
-                    width="29"
-                    height="40"
-                    viewBox="0 0 29 40"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <circle
-                      cx="2.288"
-                      cy="25.9912"
-                      r="1.39737"
-                      transform="rotate(-90 2.288 25.9912)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="14.5849"
-                      cy="25.9911"
-                      r="1.39737"
-                      transform="rotate(-90 14.5849 25.9911)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="26.7216"
-                      cy="25.9911"
-                      r="1.39737"
-                      transform="rotate(-90 26.7216 25.9911)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="2.288"
-                      cy="13.6944"
-                      r="1.39737"
-                      transform="rotate(-90 2.288 13.6944)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="14.5849"
-                      cy="13.6943"
-                      r="1.39737"
-                      transform="rotate(-90 14.5849 13.6943)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="26.7216"
-                      cy="13.6943"
-                      r="1.39737"
-                      transform="rotate(-90 26.7216 13.6943)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="2.288"
-                      cy="38.0087"
-                      r="1.39737"
-                      transform="rotate(-90 2.288 38.0087)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="2.288"
-                      cy="1.39739"
-                      r="1.39737"
-                      transform="rotate(-90 2.288 1.39739)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="14.5849"
-                      cy="38.0089"
-                      r="1.39737"
-                      transform="rotate(-90 14.5849 38.0089)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="26.7216"
-                      cy="38.0089"
-                      r="1.39737"
-                      transform="rotate(-90 26.7216 38.0089)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="14.5849"
-                      cy="1.39761"
-                      r="1.39737"
-                      transform="rotate(-90 14.5849 1.39761)"
-                      fill="#3056D3"
-                    />
-                    <circle
-                      cx="26.7216"
-                      cy="1.39761"
-                      r="1.39737"
-                      transform="rotate(-90 26.7216 1.39761)"
-                      fill="#3056D3"
-                    />
-                  </svg>
-                </span>
-              </div>
+              )}
             </div>
+
+            {/* Confirm password */}
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5 block">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Icon icon="mdi:lock-check-outline"
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
+                <input
+                  type={showPass.confirm ? "text" : "password"}
+                  name="confirmPassword" placeholder="Repeat password"
+                  value={data.confirmPassword} onChange={handleChange} required
+                  className={`w-full pl-10 pr-11 py-3 rounded-xl border bg-slate-50
+                             text-sm text-slate-900 placeholder:text-slate-400
+                             focus:outline-none focus:ring-2 focus:border-primary/50 transition-all
+                             ${data.confirmPassword && data.newPassword !== data.confirmPassword
+                               ? "border-red-300 focus:ring-red-200"
+                               : "border-slate-200 focus:ring-primary/20"}`}
+                />
+                <button type="button"
+                  onClick={() => setShowPass(p => ({ ...p, confirm: !p.confirm }))}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <Icon icon={showPass.confirm ? "mdi:eye-off-outline" : "mdi:eye-outline"} className="text-lg" />
+                </button>
+              </div>
+              {data.confirmPassword && data.newPassword !== data.confirmPassword && (
+                <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                  <Icon icon="mdi:alert-circle-outline" className="text-sm" />
+                  Passwords do not match
+                </p>
+              )}
+            </div>
+
+            <button type="submit" disabled={loading}
+              className="w-full bg-primary text-white py-3 rounded-xl font-semibold text-sm
+                         hover:bg-primary/90 active:scale-[0.98] transition-all duration-200
+                         disabled:opacity-60 disabled:cursor-not-allowed mt-2
+                         flex items-center justify-center gap-2 shadow-md shadow-primary/20">
+              {loading
+                ? <><Icon icon="mdi:loading" className="animate-spin text-lg" /> Saving…</>
+                : <><Icon icon="mdi:check-circle-outline" className="text-base" /> Save New Password</>
+              }
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <Link href="/" className="text-sm text-slate-500 hover:text-primary transition-colors
+                                      flex items-center justify-center gap-1">
+              <Icon icon="mdi:arrow-left" className="text-base" />
+              Back to sign in
+            </Link>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 

@@ -1,18 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    turbo: {},
-  },
   images: {
-    remotePatterns: [
-      {
-        protocol: "http",
-        hostname: "127.0.0.1",
-        port: "8000",
-        pathname: "/media/**",
-      },
-    ],
-  },
+  unoptimized: true, // sabse simple fix
+  // ya specific domains:
+  remotePatterns: [
+    {
+      protocol: "http",
+      hostname: "127.0.0.1",
+      port: "8000",
+      pathname: "/media/**",
+    },
+    {
+      protocol: "https",
+      hostname: "classroom.onrender.com",
+      port: "",
+      pathname: "/media/**",
+    },
+  ],
+}
 };
 
 export default nextConfig;

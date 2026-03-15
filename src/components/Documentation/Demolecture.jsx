@@ -1,177 +1,255 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
-import { Icon } from "@iconify/react/dist/iconify.js";
+import { Icon } from "@iconify/react";
 import { Dialog } from "@headlessui/react";
-import { DocNavigation } from "./DocNavigation";
+import { useRouter } from "next/navigation";
+import { useCart } from "@/context/CartContext";
+import { toast } from "react-toastify";
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden border border-slate-100 animate-pulse">
+      <div className="bg-slate-200 aspect-video" />
+      <div className="p-4 space-y-2.5">
+        <div className="h-4 bg-slate-200 rounded w-3/4" />
+        <div className="h-3 bg-slate-100 rounded w-full" />
+        <div className="h-3 bg-slate-100 rounded w-2/3" />
+        <div className="h-9 bg-slate-200 rounded-full w-full mt-3" />
+      </div>
+    </div>
+  );
+}
+
+const getEmbedUrl = (url) => {
+  if (!url) return null;
+  if (url.includes("youtube.com/watch?v=")) {
+    const videoId = new URL(url).searchParams.get("v");
+    return `https://www.youtube.com/embed/${videoId}`;
+  }
+  if (url.includes("youtu.be/")) {
+    return `https://www.youtube.com/embed/${url.split("youtu.be/")[1]}`;
+  }
+  if (url.includes("drive.google.com") && url.includes("/view")) {
+    return url.replace("/view", "/preview");
+  }
+  if (url.endsWith(".pdf")) return url + "#view=FitH";
+  return url;
+};
 
 export const Demolecture = () => {
-  const [docNavbarOpen, setDocNavbarOpen] = useState(false);
+  const router  = useRouter();
+  const { addToCart } = useCart();
+  const [lectures, setLectures]               = useState([]);
+  const [loading, setLoading]                 = useState(true);
   const [selectedLecture, setSelectedLecture] = useState(null);
-  const [lecture, setDemolecture] = useState([]);
 
   useEffect(() => {
+    setLoading(true);
     apiGet("/demolecture/")
-      .then(setDemolecture)
-      .catch(console.error);
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data.results || [];
+        setLectures(list);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  // ✅ Function to get embeddable URLs
-  const getEmbedUrl = (url) => {
-    if (!url) return null;
-
-    // YouTube long link
-    if (url.includes("youtube.com/watch?v=")) {
-      const videoId = new URL(url).searchParams.get("v");
-      return `https://www.youtube.com/embed/${videoId}`;
-    }
-
-    // YouTube short link
-    if (url.includes("youtu.be/")) {
-      const videoId = url.split("youtu.be/")[1];
-      return `https://www.youtube.com/embed/${videoId}`;
-    }
-
-    // Google Drive PDF (view only)
-    if (url.includes("drive.google.com") && url.includes("/view")) {
-      return url.replace("/view", "/preview");
-    }
-
-    // Direct PDF
-    if (url.endsWith(".pdf")) {
-      return url + "#view=FitH";
-    }
-
-    return url; // default
+  const handleBuyLecture = (e, lectureDetail) => {
+    e.stopPropagation();
+    router.push(`/courses/lectures/${lectureDetail.slug}`);
   };
 
   return (
     <>
-      <section id="lectures" className="md:scroll-m-[180px] scroll-m-28">
-        {docNavbarOpen && (
-          <div
-            className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-40"
-            onClick={() => setDocNavbarOpen(false)}
-          />
-        )}
+      <div>
+        <p className="text-slate-400 text-sm mb-6 flex items-center gap-1.5">
+          <Icon icon="solar:info-circle-linear" className="text-base flex-shrink-0" />
+          These are preview lectures. Enroll to access the full course.
+        </p>
 
-        {/* Header */}
-        <div className="sm:flex justify-between items-center mb-10">
-          <h3 className="text-midnight_text text-4xl lg:text-5xl font-semibold mb-5 sm:mb-0">
-            Demo Lectures.
-          </h3>
-          <button onClick={() => setDocNavbarOpen(true)} className="p-0">
-            <Icon icon="gg:menu-right" className="text-3xl lg:hidden block" />
-          </button>
-        </div>
-                {/* Footer Note */}
-        <div className="mt-10">
-          <p className="text-base font-medium text-black text-opacity-60">
-            These demo lectures are provided for preview purposes. Access full lectures in the course.
-          </p>
-        </div>
-
-        {/* Cards Grid */}
-        <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 gap-8">
-          {lecture.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-2xl shadow-course-shadow overflow-hidden h-full flex flex-col"
-            >
-              {/* Thumbnail */}
-              <div className="relative aspect-w-16 aspect-h-9 bg-black">
-                {getEmbedUrl(item.url) && (
-                  <iframe
-                    src={getEmbedUrl(item.url)}
-                    title={item.title}
-                    allowFullScreen
-                    className="w-full h-full pointer-events-none"
-                  />
-                )}
-              </div>
-
-              {/* Details */}
-              <div className="p-6 flex flex-col flex-grow">
-                <h5 className="text-xl font-bold text-black mb-3 line-clamp-1">
-                  {item.title}
-                </h5>
-                <p className="text-base text-black/70 line-clamp-2 flex-grow">
-                  {item.description}
-                </p>
-
-                <button
-                  onClick={() => setSelectedLecture(item)}
-                  className="mt-4 text-primary text-sm font-medium hover:tracking-wide duration-300 self-start"
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {loading
+            ? [...Array(6)].map((_, i) => <SkeletonCard key={i} />)
+            : lectures.map((item, i) => (
+                <div
+                  key={item.id}
+                  className="bg-white rounded-2xl overflow-hidden border border-slate-100
+                             hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group
+                             flex flex-col"
+                  style={{ animation: `fadeInUp 0.4s ease ${Math.min(i * 60, 400)}ms both` }}
                 >
-                  ▶ Watch & Read More
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+                  {/* Thumbnail */}
+                  <div className="relative aspect-video bg-slate-900 overflow-hidden flex-shrink-0">
+                    {getEmbedUrl(item.url) ? (
+                      <iframe
+                        src={getEmbedUrl(item.url)}
+                        title={item.title}
+                        allowFullScreen
+                        className="w-full h-full pointer-events-none"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Icon icon="solar:play-circle-bold" className="text-white/30 text-6xl" />
+                      </div>
+                    )}
+                    {/* Play overlay */}
+                    <button
+                      onClick={() => setSelectedLecture(item)}
+                      className="absolute inset-0 flex items-center justify-center
+                                 bg-black/0 hover:bg-black/40 transition-all duration-300 group/play"
+                    >
+                      <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center
+                                      scale-0 group-hover/play:scale-100 transition-transform duration-300 shadow-lg">
+                        <Icon icon="solar:play-bold" className="text-primary text-xl ml-0.5" />
+                      </div>
+                    </button>
+                  </div>
 
-      {/* Video / PDF Modal */}
+                  {/* Info */}
+                  <div className="p-4 flex flex-col flex-1">
+                    <h5 className="text-slate-900 font-bold text-base line-clamp-1 mb-1.5
+                                   group-hover:text-primary transition-colors">
+                      {item.title}
+                    </h5>
+                    <p className="text-slate-500 text-sm line-clamp-2 leading-relaxed mb-3 flex-1">
+                      {item.description}
+                    </p>
+
+                    <button
+                      onClick={() => setSelectedLecture(item)}
+                      className="flex items-center gap-1.5 text-primary text-xs font-semibold
+                                 hover:gap-2.5 transition-all duration-200 mb-4"
+                    >
+                      <Icon icon="solar:play-circle-bold" className="text-sm" />
+                      Watch Preview
+                      <Icon icon="solar:arrow-right-linear" className="text-xs" />
+                    </button>
+
+                    {/* Buy button — sirf tab dikhega jab lecture linked ho */}
+                    {item.lecture_detail && (
+                      <div className="border-t border-slate-100 pt-3">
+                        {/* Linked product info */}
+                        <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
+                          <Icon icon="solar:tag-linear" className="text-xs" />
+                          From: <span className="text-slate-600 font-medium line-clamp-1 ml-1">
+                            {item.lecture_detail.title}
+                          </span>
+                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          {item.lecture_detail.base_price && (
+                            <span className="text-primary font-black text-base">
+                              ₹{Number(item.lecture_detail.base_price).toLocaleString()}
+                            </span>
+                          )}
+                          <button
+                            onClick={(e) => handleBuyLecture(e, item.lecture_detail)}
+                            className="flex items-center gap-1.5 bg-primary text-white
+                                       px-4 py-2 rounded-full text-xs font-semibold
+                                       hover:bg-primary/90 transition-all duration-200
+                                       active:scale-95 flex-shrink-0"
+                          >
+                            <Icon icon="solar:cart-plus-bold" className="text-sm" />
+                            Buy Full Course
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+        </div>
+
+        {!loading && lectures.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+              <Icon icon="solar:video-library-bold" className="text-3xl text-slate-400" />
+            </div>
+            <h3 className="text-base font-bold text-slate-700">No demo lectures yet</h3>
+            <p className="text-slate-400 text-sm mt-1">Check back soon</p>
+          </div>
+        )}
+      </div>
+
+      {/* Modal */}
       <Dialog
         open={!!selectedLecture}
         onClose={() => setSelectedLecture(null)}
-        className="fixed inset-0 z-50 flex items-center justify-center"
+        className="relative z-50"
       >
-        <div className="fixed inset-0 bg-black bg-opacity-50" />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <Dialog.Panel className="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl">
 
-        <div className="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-8 mx-4 z-50">
-          {/* Close button */}
-          <button
-            className="absolute top-4 right-4 text-gray-600 hover:text-black text-2xl"
-            onClick={() => setSelectedLecture(null)}
-          >
-            ✕
-          </button>
+            {selectedLecture && getEmbedUrl(selectedLecture.url) && (
+              <div className="aspect-video bg-black">
+                <iframe
+                  src={getEmbedUrl(selectedLecture.url)}
+                  title={selectedLecture.title}
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </div>
+            )}
 
-          {selectedLecture && getEmbedUrl(selectedLecture.url) && (
-            <div className="aspect-w-16 aspect-h-9 rounded-xl overflow-hidden mb-6">
-              <iframe
-                src={getEmbedUrl(selectedLecture.url)}
-                title={selectedLecture.title}
-                allowFullScreen
-                className="w-full h-96"
-              />
+            <div className="p-6">
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <h3 className="text-slate-900 text-xl font-bold leading-snug">
+                  {selectedLecture?.title}
+                </h3>
+                <button
+                  onClick={() => setSelectedLecture(null)}
+                  className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center
+                             hover:bg-slate-200 transition-colors flex-shrink-0"
+                >
+                  <Icon icon="mdi:close" className="text-slate-500 text-base" />
+                </button>
+              </div>
+
+              <p className="text-slate-500 text-sm leading-relaxed whitespace-pre-line mb-5">
+                {selectedLecture?.description}
+              </p>
+
+              {/* Buy button inside modal */}
+              {selectedLecture?.lecture_detail && (
+                <div className="flex items-center justify-between gap-4
+                                bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="min-w-0">
+                    <p className="text-xs text-slate-400 mb-0.5">Full Course</p>
+                    <p className="text-slate-900 font-bold text-sm line-clamp-1">
+                      {selectedLecture.lecture_detail.title}
+                    </p>
+                    {selectedLecture.lecture_detail.base_price && (
+                      <p className="text-primary font-black text-lg mt-0.5">
+                        ₹{Number(selectedLecture.lecture_detail.base_price).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      setSelectedLecture(null);
+                      handleBuyLecture(e, selectedLecture.lecture_detail);
+                    }}
+                    className="flex items-center gap-2 bg-primary text-white
+                               px-5 py-2.5 rounded-full text-sm font-semibold
+                               hover:bg-primary/90 transition-all duration-200
+                               active:scale-95 flex-shrink-0 shadow-md shadow-primary/20"
+                  >
+                    <Icon icon="solar:cart-plus-bold" className="text-base" />
+                    Buy Full Course
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-
-          {/* Title */}
-          <h3 className="text-2xl font-bold mb-4 text-black">
-            {selectedLecture?.title}
-          </h3>
-
-          {/* Full Description */}
-          <p className="text-gray-700 leading-relaxed text-base whitespace-pre-line">
-            {selectedLecture?.description}
-          </p>
+          </Dialog.Panel>
         </div>
       </Dialog>
 
-      {/* Mobile Menu */}
-      <div
-        className={`lg:hidden block fixed top-0 right-0 h-full w-full bg-white dark:bg-dark shadow-lg transform transition-transform duration-300 max-w-xs ${
-          docNavbarOpen ? "translate-x-0" : "translate-x-full"
-        } z-50`}
-      >
-        <div className="flex items-center justify-between p-4">
-          <h2 className="text-lg font-bold text-midnight_text dark:text-black">
-            Docs Menu
-          </h2>
-          <button
-            onClick={() => setDocNavbarOpen(false)}
-            aria-label="Close mobile menu"
-          >
-            <Icon icon="mdi:close" className="text-2xl" />
-          </button>
-        </div>
-        <nav className="px-4">
-          <DocNavigation />
-        </nav>
-      </div>
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </>
   );
 };

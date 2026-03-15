@@ -1,18 +1,16 @@
-import { getImagePrefix } from "@/utils/util";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
 
 const Logo = () => {
   return (
-    <Link href="/">
+    <Link href="/" className="flex-shrink-0">
       <Image
-        src= "/images/logo/logo.svg"
+        src="/images/logo/logo.svg"
         alt="logo"
-        width={160}
-        height={50}
-        style={{ width: "auto", height: "auto" }}
-        quality={100}
+        width={140}
+        height={44}
+        style={{ width: "auto", height: "44px" }}
+        priority
       />
     </Link>
   );

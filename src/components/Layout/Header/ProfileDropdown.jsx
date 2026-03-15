@@ -1,9 +1,16 @@
 "use client";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function ProfileDropdown({ user, onLogout }) {
+  if (!user) return null;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-2">
@@ -14,17 +21,22 @@ export default function ProfileDropdown({ user, onLogout }) {
             <AvatarFallback>{user?.name?.[0] || "U"}</AvatarFallback>
           )}
         </Avatar>
-        <span className="font-medium">Hi, {user?.name || "User"}</span>
+        <span className="font-medium">Hi, {user?.name}</span>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem asChild>
           <Link href="/profile">Profile</Link>
         </DropdownMenuItem>
+
         <DropdownMenuItem asChild>
-          <Link href="/Order">Order</Link>
+          <Link href="/my-orders">My Orders</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onLogout}>
+
+        <DropdownMenuItem
+          onClick={onLogout}
+          className="text-red-500 cursor-pointer"
+        >
           Logout
         </DropdownMenuItem>
       </DropdownMenuContent>

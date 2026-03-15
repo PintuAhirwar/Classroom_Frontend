@@ -4,5 +4,5 @@ export const getImagePrefix = () => {
       ? "http://127.0.0.1:8000"
       : "https://classroom.onrender.com";
 
-  return `${base}/media/`;  // <<< MOST IMPORTANT
+  return `${base}/media/`;
 };
