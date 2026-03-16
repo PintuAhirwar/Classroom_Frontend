@@ -69,7 +69,7 @@ function FilterSection({ title, children, defaultOpen = true, count = 0 }) {
   );
 }
 
-export default function CoursesPageContent() {
+function CoursesPageContent() {
   const searchParams  = useSearchParams();
   const router        = useRouter();
   const { addToCart } = useCart();
