@@ -7,6 +7,7 @@ import { API_BASE } from "@/lib/api";
 import { getImagePrefix } from "@/utils/getImagePrefix";
 import { useCart } from "@/context/CartContext";
 import { toast } from "react-toastify";
+import { Suspense } from "react";
 
 // ── Image helper ──────────────────────────────────────────────────────────────
 function getImageUrl(img) {
@@ -68,7 +69,7 @@ function FilterSection({ title, children, defaultOpen = true, count = 0 }) {
   );
 }
 
-export default function CoursesPage() {
+export default function CoursesPageContent() {
   const searchParams  = useSearchParams();
   const router        = useRouter();
   const { addToCart } = useCart();
@@ -686,4 +687,13 @@ function SkeletonCard() {
       </section>
     </>
   );
+}
+export default function CoursesPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="text-slate-400">Loading...</div>
+    </div>}>
+      <CoursesPageContent />
+    </Suspense>
+  )
 }
